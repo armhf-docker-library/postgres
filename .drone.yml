@@ -1,0 +1,35 @@
+matrix:
+  VERSION:
+    - "9.4.6-0+deb8u1"
+
+build:
+  image: armhfbuild/buildpack-deps:jessie-scm
+  commands:
+    - git clone --single-branch --branch master https://github.com/docker-library/postgres upstream
+    - cd upstream
+    - sed -i 's/FROM debian/FROM armhfbuild\/debian/' $${VERSION:0:3}/Dockerfile
+    - sed -i 's/ENV PG_MAJOR .*/ENV PG_MAJOR $${VERSION:0:3}/' $${VERSION:0:3}/Dockerfile
+    - sed -i 's/ENV PG_VERSION .*/ENV PG_VERSION $$VERSION/' $${VERSION:0:3}/Dockerfile
+    - sed -i '/apt.postgresql.org/d' $${VERSION:0:3}/Dockerfile
+
+publish:
+  docker:
+    image: armhfplugins/drone-docker:docker-caching
+    context: upstream/$${VERSION:0:3}
+    file: upstream/$${VERSION:0:3}/Dockerfile
+    username: $$DOCKER_USER
+    password: $$DOCKER_PASSWORD
+    email: $$DOCKER_EMAIL
+    repo: armhfbuild/postgres
+    tag:
+      - "$${VERSION:0:5}"
+      - "$${VERSION:0:3}"
+
+cache:
+  mount:
+    - /drone/docker
+
+notify:
+  slack:
+    webhook_url: $$SLACK_WEBHOOK_URL
+    channel: armhf
